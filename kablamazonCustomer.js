@@ -3,30 +3,66 @@ var mysql = require('mysql');
 
 // Setup connection
 var connection = mysql.createConnection({
-	host: "localhost",
-	port: 3306,
-	user: "root",
-	password: "",
-	database: "kablamazon"
+  host: "localhost",
+  port: 3306,
+  user: "root",
+  password: "",
+  database: "kablamazon"
 });
 
 connection.connect(function(err) {
-	if (err) throw err;
+  if (err) throw err;
 
-	initDisplay();
+  initDisplay();
 });
 //initial display to show all items for sale
 function initDisplay() {
-  connection.query("SELECT * FROM products", function(error, results) {
-    if (error) throw error;
+  connection.query("SELECT * FROM products", function(err, results) {
+    if (err) throw err;
     console.log("****************************");
     console.log("ITEMS FOR SALE ON KABLAMAZON");
     console.log("****************************");
     for (var i = 0; i < results.length; i++) {
-      console.log('\nID NUMBER: ' + results[i].id + '\nPRODUCT NAME: ' + results[i].productName + '\nDEPT NAME: ' + results[i].departmentName + '\nPRICE: $' + results[i].price + '\nQUANTITY IN STOCK: ' + results[i].stockQuantity + '\n*************');
+      console.log('\nPRODUCT ID: ' + results[i].id + '\nPRODUCT NAME: ' + results[i].productName + '\nDEPT NAME: ' + results[i].departmentName + '\nPRICE: $' + results[i].price + '\nQUANTITY IN STOCK: ' + results[i].stockQuantity + '\n*************');
     }
-    //ask for ID of prodcut they would like to buy
-    //then asks how many units of product they would like to buy
+
+    inquirer.prompt([{
+      name: 'choice',
+      type: 'input',
+      message: 'Which product would you like to purchase? \nPlease enter the ID number.'
+    }]).then(function(answer) {
+      var chosenItem;
+      for (var i = 0; i < results.length; i++) {
+        if (results[i].id === answer.choice) {
+          chosenItem = results[i].id;
+        }
+      }
+      if (chosenItem != results[i].id) {
+        console.log('THAT IS NOT AN ITEM WE SELL. PLEASE TRY AGAIN.');
+      }
+
+      inquirer.prompt([{
+        name: 'howMany',
+        type: 'input',
+        message: 'How many units would you like to buy?'
+      }]).then(function(answer) {
+        var howMany = answer.choice;
+        if (chosenItem.stockQuantity >= howMany) {
+          connection.query(
+            "UPDATE products SET ? WHERE ?", [{
+                stockQuantity: stockQuantity - howMany
+              },
+              {
+                id: chosenItem.id
+              }
+            ]
+          )
+        } else {
+          console.log('SORRY, ITEM OUT OF STOCK. PLEASE SELECT ANOTHER.');
+        }
+      })
+
+    })
   });
 }
 
