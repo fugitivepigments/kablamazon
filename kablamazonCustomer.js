@@ -10,9 +10,13 @@ var connection = mysql.createConnection({
   database: "kablamazon"
 });
 
+var chosenItem;
+var totalPrice;
+
+//connects to sql database and lets us know if it failed or not
 connection.connect(function(err) {
   if (err) throw err;
-
+  console.log('We are deeply connected...to the server.');
   initDisplay();
 });
 //initial display to show all items for sale
@@ -24,48 +28,62 @@ function initDisplay() {
     console.log("****************************");
     for (var i = 0; i < results.length; i++) {
       console.log('\nPRODUCT ID: ' + results[i].id + '\nPRODUCT NAME: ' + results[i].productName + '\nDEPT NAME: ' + results[i].departmentName + '\nPRICE: $' + results[i].price + '\nQUANTITY IN STOCK: ' + results[i].stockQuantity + '\n*************');
-    }
-
+    };
     inquirer.prompt([{
-      name: 'choice',
-      type: 'input',
-      message: 'Which product would you like to purchase? \nPlease enter the ID number.'
-    }]).then(function(answer) {
-      var chosenItem;
-      for (var i = 0; i < results.length; i++) {
-        if (results[i].id === answer.choice) {
-          chosenItem = results[i].id;
-        }
-      }
-      if (chosenItem != results[i].id) {
-        console.log('THAT IS NOT AN ITEM WE SELL. PLEASE TRY AGAIN.');
-      }
-
-      inquirer.prompt([{
+        name: 'whichProduct',
+        type: 'rawlist',
+        choices: function() {
+          var choiceArray = [];
+          for (var i = 0; i < results.length; i++) {
+            choiceArray.push(results[i].productName);
+          }
+          return choiceArray;
+        },
+        message: 'WHICH PRODUCT WOULD YOU LIKE TO PURCHASE PLS?\n'
+      },
+      {
         name: 'howMany',
         type: 'input',
-        message: 'How many units would you like to buy?'
-      }]).then(function(answer) {
-        var howMany = answer.choice;
-        if (chosenItem.stockQuantity >= howMany) {
-          connection.query(
-            "UPDATE products SET ? WHERE ?", [{
-                stockQuantity: stockQuantity - howMany
-              },
-              {
-                id: chosenItem.id
-              }
-            ]
-          )
-        } else {
-          console.log('SORRY, ITEM OUT OF STOCK. PLEASE SELECT ANOTHER.');
+        message: 'PLS, HOW MANY U NEED?'
+      }
+    ]).then(function(answer) {
+      var chosenItem;
+      for (var i = 0; i < results.length; i++) {
+        if (results[i].productName === answer.whichProduct) {
+          chosenItem = results[i];
         }
-      })
-
-    })
+      }
+      if (chosenItem.stockQuantity < parseInt(answer.howMany)) {
+        console.log('SRY NOT ENOUGH IN STOCK, PLS CHOOSE A SMALLER QUANTITY THX.');
+        initDisplay();
+      } else {
+        //update db to reflect new stockQuantity
+        connection.query(
+          "UPDATE products SET stockQuantity = ? WHERE id = ?", [
+            chosenItem.stockQuantity - answer.howMany, chosenItem.id
+          ],
+          function(err) {
+            if (err) throw err;
+            totalPrice = chosenItem.price * parseInt(answer.howMany);
+            console.log('LUCKED OUT! WE HAVE ALL THAT IN STOCK. YOU OWE ME $' + totalPrice + '.');
+            inquirer.prompt({
+              name: 'anythingElse',
+              type: 'rawlist',
+              message: 'ANYTHING ELSE YOUR MAJESTY?',
+              choices: ['YA', 'NA']
+            }).then(function(answer) {
+              if (answer.anythingElse.toUpperCase() === 'YA') {
+                initDisplay();
+              } else {
+                console.log('THANKS 4 CHECKIN OUT KABLAMAZON YO!');
+              }
+            });
+          }
+        )
+      }
+    });
   });
 }
-
 //check to see if there is enough stockQuantity to complete request
 //if not, insufficient quntity logged
 
