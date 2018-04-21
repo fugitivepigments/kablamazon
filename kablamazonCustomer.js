@@ -12,6 +12,8 @@ var connection = mysql.createConnection({
 
 var chosenItem;
 var totalPrice;
+var buys = [];
+var updatedStockQty;
 
 //connects to sql database and lets us know if it failed or not
 connection.connect(function(err) {
@@ -53,6 +55,7 @@ function initDisplay() {
           chosenItem = results[i];
         }
       }
+      //checks to see if theres enough in stock
       if (chosenItem.stockQuantity < parseInt(answer.howMany)) {
         console.log('SRY NOT ENOUGH IN STOCK, PLS CHOOSE A SMALLER QUANTITY THX.');
         initDisplay();
